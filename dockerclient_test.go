@@ -79,7 +79,7 @@ func TestInfo(t *testing.T) {
 func TestKillContainer(t *testing.T) {
 	client := testDockerClient(t)
 	if err := client.KillContainer("23132acf2ac", "5"); err != nil {
-		t.Fatal("cannot kill container: %s", err)
+		t.Fatalf("cannot kill container: %s", err)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestListContainers(t *testing.T) {
 	client := testDockerClient(t)
 	containers, err := client.ListContainers(true, false, "")
 	if err != nil {
-		t.Fatal("cannot get containers: %s", err)
+		t.Fatalf("cannot get containers: %s", err)
 	}
 	assertEqual(t, len(containers), 1, "")
 	cnt := containers[0]
@@ -136,7 +136,7 @@ func TestContainerChanges(t *testing.T) {
 	client := testDockerClient(t)
 	changes, err := client.ContainerChanges("foobar")
 	if err != nil {
-		t.Fatal("cannot get container changes: %s", err)
+		t.Fatalf("cannot get container changes: %s", err)
 	}
 	assertEqual(t, len(changes), 3, "unexpected number of changes")
 	c := changes[0]
@@ -148,7 +148,7 @@ func TestListContainersWithSize(t *testing.T) {
 	client := testDockerClient(t)
 	containers, err := client.ListContainers(true, true, "")
 	if err != nil {
-		t.Fatal("cannot get containers: %s", err)
+		t.Fatalf("cannot get containers: %s", err)
 	}
 	assertEqual(t, len(containers), 1, "")
 	cnt := containers[0]
@@ -159,13 +159,13 @@ func TestListContainersWithFilters(t *testing.T) {
 	client := testDockerClient(t)
 	containers, err := client.ListContainers(true, true, "{'id':['332375cfbc23edb921a21026314c3497674ba8bdcb2c85e0e65ebf2017f688ce']}")
 	if err != nil {
-		t.Fatal("cannot get containers: %s", err)
+		t.Fatalf("cannot get containers: %s", err)
 	}
 	assertEqual(t, len(containers), 1, "")
 
 	containers, err = client.ListContainers(true, true, "{'id':['332375cfbc23edb921a21026314c3497674ba8bdcb2c85e0e65ebf2017f688cf']}")
 	if err != nil {
-		t.Fatal("cannot get containers: %s", err)
+		t.Fatalf("cannot get containers: %s", err)
 	}
 	assertEqual(t, len(containers), 0, "")
 }
@@ -283,14 +283,14 @@ func TestMonitorEvents(t *testing.T) {
 	}
 
 	eventInfo := <-eventInfoChan
-	if eventInfo.Error != nil || eventInfo.Event != expectedEvents[0] {
+	if eventInfo.Error != nil || reflect.DeepEqual(eventInfo.Event, expectedEvents[0]) == false {
 		t.Fatalf("got:\n%#v\nexpected:\n%#v", eventInfo, expectedEvents[0])
 	}
 	close(stopChan)
 	for i := 0; i < 3; i++ {
 		_, ok := <-eventInfoChan
 		if i == 2 && ok {
-			t.Fatalf("read more than 2 events successfully after closing stopChan")
+			t.Fatal("read more than 2 events successfully after closing stopChan")
 		}
 	}
 
@@ -303,7 +303,7 @@ func TestMonitorEvents(t *testing.T) {
 	for i, expectedEvent := range expectedEvents {
 		t.Logf("on iter %d\n", i)
 		eventInfo := <-eventInfoChan
-		if eventInfo.Error != nil || eventInfo.Event != expectedEvent {
+		if eventInfo.Error != nil || reflect.DeepEqual(eventInfo.Event, expectedEvent) == false {
 			t.Fatalf("index %d, got:\n%#v\nexpected:\n%#v", i, eventInfo, expectedEvent)
 		}
 		t.Logf("done with iter %d\n", i)
