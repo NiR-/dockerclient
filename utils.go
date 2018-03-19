@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/docker/go-connections/sockets"
 )
 
 type tcpFunc func(*net.TCPConn, time.Duration) error
@@ -13,12 +15,23 @@ type tcpFunc func(*net.TCPConn, time.Duration) error
 func newHTTPClient(u *url.URL, tlsConfig *tls.Config, timeout time.Duration, setUserTimeout tcpFunc) *http.Client {
 	httpTransport := &http.Transport{
 		TLSClientConfig: tlsConfig,
+		Proxy:           http.ProxyFromEnvironment,
 	}
 
 	switch u.Scheme {
 	default:
+		dialer := &net.Dialer{
+			Timeout:   timeout,
+			DualStack: true,
+		}
+		dial := dialer.Dial
+
+		if proxyDialer, err := sockets.DialerFromEnvironment(dialer); err == nil {
+			dial = proxyDialer.Dial
+		}
+
 		httpTransport.Dial = func(proto, addr string) (net.Conn, error) {
-			conn, err := net.DialTimeout(proto, addr, timeout)
+			conn, err := dial(proto, addr)
 			if tcpConn, ok := conn.(*net.TCPConn); ok && setUserTimeout != nil {
 				// Sender can break TCP connection if the remote side doesn't
 				// acknowledge packets within timeout
